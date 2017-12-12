@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html ng-app="ionicApp" >
+<head>
+    <link href="css/ionic.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="js/ionic.bundle.min.js"></script>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="js/js.cookie.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title>菜鸟教程(runoob.com)</title>
+
+    <style>
+        body {
+            cursor: url('http://www.runoob.com/static/img/finger.png'), auto;
+        }
+    </style>
+</head>
+<body>
+
+<ion-nav-bar class="bar-positive" animation="nav-title-slide-ios7"
+             type="bar-positive"
+             back-button-type="button-icon"
+             back-button-icon="ion-arrow-left-c">
+    <ion-nav-back-button>
+    </ion-nav-back-button>
+</ion-nav-bar>
+
+<ion-nav-view animation="slide-left-right"></ion-nav-view>
+
+
+<script id="tabs.html" type="text/ng-template">
+    <ion-tabs  class="tabs-icon-top"  tabs-style="tabs-icon-top" tabs-type="tabs-positive">
+
+        <ion-tab title={{tapTitle[0].name}} icon="ion-home"  href="#/tab/home">
+            <ion-nav-view name="home-tab"></ion-nav-view>
+        </ion-tab>
+
+        <ion-tab title={{tapTitle[1].name}} icon=" ion-person"  href="#/tab/my">
+            <ion-nav-view name="about-tab"></ion-nav-view>
+        </ion-tab>
+
+    </ion-tabs>
+</script>
+
+<script id="home.html" type="text/ng-template">
+    <ion-view title={{tapTitle[0].name}} >
+            <ion-nav-buttons side="right">
+                    <a class="button button-clear icon ion-plus-round" href={{isLogin==true?'#/tab/new':'#/tab/login'}} >
+                    </a>
+            </ion-nav-buttons>
+        <ion-content has-header="true" padding="true">
+            <ion-list>
+                <ion-item ng-repeat="item in data">
+                    <div class="card">
+                        <div class="item item-divider">
+                            {{item.title}}
+                        </div>
+                        <div class="item item-text-wrap">
+                            {{item.id}}
+                        </div>
+                        <div class="item item-divider">
+                            由 {{item.auth}} 创建于 {{timeFormat(item.create_time)}}
+                        </div>
+                        <div class="item item-divider">
+                            最后修改于 {{timeFormat(item.update_time)}}
+                        </div>
+                        <div class="item item-divider">
+                            <button class="button icon ion-gear-a"></button>
+                        </div>
+                    </div>
+                </ion-item>
+            </ion-list>
+        </ion-content>
+    </ion-view>
+</script>
+
+
+<script id="about.html" type="text/ng-template">
+    <ion-view title="'About'">
+        <ion-content has-header="true" padding="true">
+            <h3>Create hybrid mobile apps with the web technologies you love.</h3>
+            <p>Free and open source, Ionic offers a library of mobile-optimized HTML, CSS and JS components for building highly interactive apps.</p>
+            <p>Built with Sass and optimized for AngularJS.</p>
+            <p>
+                <a class="button icon icon-right ion-chevron-right">Tabs Nav Stack</a>
+            </p>
+        </ion-content>
+    </ion-view>
+</script>
+
+<script id="login.html" type="text/ng-template">
+    <ion-view view-title={{tapTitle[2].name}}>
+        <ion-content class="padding">
+                <div class="list list-inset">
+                    <label class="item item-input">
+                        <input type="text" placeholder="邮箱" ng-model="login.email">
+                    </label>
+                    <label class="item item-input">
+                        <input type="password" placeholder="密码" ng-model="login.password">
+                    </label>
+                </div>
+                <div class="padding" ng-click="loginSubmit()">
+                    <button class="button button-block button-positive">登录</button>
+                </div>
+        </ion-content>
+    </ion-view>
+</script>
+
+<script id="new.html" type="text/ng-template">
+    <ion-view view-title={{tapTitle[4].name}}>
+        <ion-content class="padding">
+            <div class="list list-inset">
+                <label class="item item-input">
+                    <input type="text" placeholder="标题" ng-model="new.title">
+                </label>
+                <label class="item item-input">
+                        <textarea   class="textboxHeight" type="text" placeholder="内容" ng-model="new.content"></textarea>
+                </label>
+            </div>
+            <div class="padding" ng-click="loginSubmit()">
+                <button class="button button-block button-positive">发表</button>
+            </div>
+        </ion-content>
+    </ion-view>
+</script>
+
+<script id="my.html" type="text/ng-template">
+    <ion-view view-title={{tapTitle[1].name}}>
+        <ion-content class="padding">
+            <div class="padding" ng-click="loginSubmit()">
+                <button class="button button-block button-positive">登出</button>
+            </div>
+        </ion-content>
+    </ion-view>
+</script>
+
+<script type="text/javascript">
+    var _host = 'http://localhost/basic/web/';
+    var _token = '';
+    if(Cookies.get('token')){
+        _token = Cookies.get('token');
+    }
+    var _Page = '';
+    var _Scope = '';
+    function getContent(scope) {
+        $.ajax({
+            url:_host+'?r=test&fn=loadMore',
+            data:{
+                currentItem:1,
+                number:10,
+                token:'',
+            },
+            dataType:'json',
+            async:true,
+            success:function (data) {
+                scope.data = data.info;
+            },
+        })
+    }
+    function login(email,password,scope) {
+        $.ajax({
+            type: 'get',
+            url: _host+'?r=site&fn=login',
+            data: {email:email,password:password,token:_token} ,
+            dataType: 'json',
+            success: function(data) {
+                if(data.code==0){
+                    Cookies.set('token',data.token);
+                    _token=data.token;
+                    var username = data.data;
+                    console.log('欢迎您,'+username);
+                    checkLogin(scope);
+                    scope.$on('$ionicView.beforeEnter', function () {
+                                          scope.refresh();//刷新页面
+                    });
+                    window.history.back();
+                }else{
+                    console.log('邮箱或密码错误');
+                    checkLogin(scope);
+                }
+            }
+        });
+    }
+    function checkLogin(scope) {
+        $.ajax({
+            url:_host+'?r=site&fn=checkLogin',
+            data:{token:_token},
+            dataType:'json',
+            success:function (data) {
+                if(data){
+                    if(data.code==0){
+                        scope.isLogin=true;
+                    }else{
+                        scope.isLogin=false;
+                    }
+                }
+            }
+        });
+
+    }
+    angular.module('ionicApp', ['ionic'])
+
+        .config(function($stateProvider, $urlRouterProvider) {
+
+            $stateProvider
+                .state('tabs', {
+                    url: "/tab",
+                    abstract: true,
+                    templateUrl: "tabs.html",
+                    controller:'app'
+                })
+                .state('tabs.home', {
+                    url: "/home",
+                    views: {
+                        'home-tab': {
+                            templateUrl: "home.html",
+                            controller:'app',
+                        }
+                    }
+                })
+                .state('tabs.about', {
+                    url: "/about",
+                    views: {
+                        'about-tab': {
+                            templateUrl: "about.html"
+                        }
+                    }
+                })
+                .state('tabs.login', {
+                    url: "/login",
+                    views: {
+                        'home-tab': {
+                            templateUrl: "login.html"
+                        }
+                    }
+                })
+                .state('tabs.new', {
+                    url: "/new",
+                    views: {
+                        'home-tab': {
+                            templateUrl: "new.html"
+                        }
+                    }
+                })
+                .state('tabs.my', {
+                    url: "/my",
+                    views: {
+                        'my-tab': {
+                            templateUrl: "my.html",
+                        }
+                    }
+                })
+
+            $urlRouterProvider.otherwise("/tab/home");
+
+        })
+
+        .controller('app', function($scope) {
+            _Scope=$scope;
+            checkLogin($scope);
+            getContent($scope);
+            $scope.tapTitle=[{'name':'主页'},
+                            {'name':'我的'},
+                            {'name':'登录'},
+                            {'name':'注册'},
+                            {'name':'新日记'},
+                            {'name':'关于我'},
+                           ];
+            $scope.isLogin=false;
+            $scope.login = {'email':'',
+                            'password':''
+            }
+            $scope.loginSubmit = function () {
+                var email = $scope.login.email;
+                var password = $scope.login.password;
+                login(email,password,$scope);
+            }
+            $scope.timeFormat = function (nS) {
+                return new Date(parseInt(nS) * 1000).toLocaleString().replace(/:\d{1,2}$/,' ');  ;
+            }
+            $scope.refresh = function () {
+                location.reload();
+            }
+        });
+
+</script>
+
+</body>
+
+
+</html>
