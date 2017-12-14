@@ -8,7 +8,7 @@
     <script src="js/js.cookie.js"></script>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
-    <title>菜鸟教程(runoob.com)</title>
+    <title>djy field</title>
 
     <style>
         body {
@@ -25,7 +25,6 @@
     <ion-nav-back-button>
     </ion-nav-back-button>
 </ion-nav-bar>
-
 <ion-nav-view animation="slide-left-right"></ion-nav-view>
 
 
@@ -37,7 +36,7 @@
         </ion-tab>
 
         <ion-tab title={{tapTitle[1].name}} icon=" ion-person"  href="#/tab/my">
-            <ion-nav-view name="about-tab"></ion-nav-view>
+            <ion-nav-view name="my-tab"></ion-nav-view>
         </ion-tab>
 
     </ion-tabs>
@@ -46,21 +45,24 @@
 <script id="home.html" type="text/ng-template">
     <ion-view title={{tapTitle[0].name}} >
             <ion-nav-buttons side="right">
-                    <a class="button button-clear icon ion-plus-round" href={{isLogin==true?'#/tab/new':'#/tab/login'}} >
+                    <button class="button button-clear icon ion-load-a" on-tap="pullFresh()"></button>
+                    <a class="button button-clear icon ion-edit" href={{isLogin==true?'#/tab/new':'#/tab/login'}} >
                     </a>
             </ion-nav-buttons>
         <ion-content has-header="true" padding="true">
+            <ion-refresher pulling-text="下拉刷新" on-refresh="pullFresh()"></ion-refresher>
             <ion-list>
-                <ion-item ng-repeat="item in data">
+                <ion-item ng-repeat="item in homeList">
                     <div class="card">
-                        <div class="item item-divider">
-                            {{item.title}}
+                        <div class="item item-divider row">
+                            <span class="col-25">{{substr(item.title,20)}}</span>
+                            <span class="col-offset-66 {{item.isPublic==0?'calm':'energized'}}">{{item.isPublic==0?'公开':'私密'}}</span>
                         </div>
                         <div class="item item-text-wrap">
-                            {{item.id}}
+                            {{substr(item.content,100)}}
                         </div>
                         <div class="item item-divider">
-                            由 {{item.auth}} 创建于 {{timeFormat(item.create_time)}}
+                            由 {{item.authName}} 创建于 {{timeFormat(item.create_time)}}
                         </div>
                         <div class="item item-divider">
                             最后修改于 {{timeFormat(item.update_time)}}
@@ -70,7 +72,10 @@
                         </div>
                     </div>
                 </ion-item>
-            </ion-list>
+            </ion-lst>
+            <ion-infinite-scroll ng-if="hasMore" on-infinite="loadMore()">
+                <ion-infinite-scroll-content   loadingSpinner="bubbles"></ion-infinite-scroll-content>
+            </ion-infinite-scroll>
         </ion-content>
     </ion-view>
 </script>
@@ -83,7 +88,7 @@
             <p>Free and open source, Ionic offers a library of mobile-optimized HTML, CSS and JS components for building highly interactive apps.</p>
             <p>Built with Sass and optimized for AngularJS.</p>
             <p>
-                <a class="button icon icon-right ion-chevron-right">Tabs Nav Stack</a>
+                <a class="button icon icon-right ion-chevron-right" href='#/tab/my'>Tabs Nav Stack</a>
             </p>
         </ion-content>
     </ion-view>
@@ -118,7 +123,7 @@
                         <textarea   class="textboxHeight" type="text" placeholder="内容" ng-model="new.content"></textarea>
                 </label>
             </div>
-            <div class="padding" ng-click="loginSubmit()">
+            <div class="padding" ng-click="addNoteSubmit()">
                 <button class="button button-block button-positive">发表</button>
             </div>
         </ion-content>
@@ -127,38 +132,70 @@
 
 <script id="my.html" type="text/ng-template">
     <ion-view view-title={{tapTitle[1].name}}>
-        <ion-content class="padding">
-            <div class="padding" ng-click="loginSubmit()">
+        <ion-content  has-header="true" class="padding">
+            <div class="padding" ng-click="logout()" ng-if="isLogin">
                 <button class="button button-block button-positive">登出</button>
+            </div>
+            <div class="padding"  ng-if="!isLogin">
+                <a class="button button-block button-positive" href='#/tab/login'>你还没登录,快去登陆吧</a>
             </div>
         </ion-content>
     </ion-view>
 </script>
 
+<script id="detail.html" type="text/ng-template">
+    <ion-view view-title={{tapTitle[4].name}}>
+        <ion-content class="padding">
+            <div class="list list-inset">
+                <label class="item item-input">
+                    <input type="text" placeholder="标题" ng-model="new.title">
+                </label>
+                <label class="item item-input">
+                    <textarea   class="textboxHeight" type="text" placeholder="内容" ng-model="new.content"></textarea>
+                </label>
+            </div>
+            <div class="padding" ng-click="loginSubmit()">
+                <button class="button button-block button-positive">发表</button>
+            </div>
+        </ion-content>
+    </ion-view>
+</script>
+
+
+
 <script type="text/javascript">
-    var _host = 'http://localhost/basic/web/';
+    var _host = 'http://127.0.0.1/basic/web/';
     var _token = '';
     if(Cookies.get('token')){
         _token = Cookies.get('token');
     }
     var _Page = '';
     var _Scope = '';
-    function getContent(scope) {
+    function getContent(scope,callback) {
         $.ajax({
             url:_host+'?r=test&fn=loadMore',
             data:{
-                currentItem:1,
+                currentItem:scope.currentPage,
                 number:10,
-                token:'',
+                token:_token,
             },
             dataType:'json',
             async:true,
             success:function (data) {
-                scope.data = data.info;
+                if(data.info){
+                    scope.data = data.info;
+                    scope.homeList=scope.homeList.concat(scope.data);
+                    scope.theLastItemId=data.info[data.info.length-1].id;
+                }else{
+                    scope.hasMore=false;
+                }
+                if(callback){
+                    callback();
+                }
             },
         })
     }
-    function login(email,password,scope) {
+    function login(email,password,scope,ionicPopup) {
         $.ajax({
             type: 'get',
             url: _host+'?r=site&fn=login',
@@ -176,10 +213,13 @@
                     });
                     window.history.back();
                 }else{
+                    ionicPopup.alert({
+                        title: '邮箱或密码错误',
+                    });
                     console.log('邮箱或密码错误');
                     checkLogin(scope);
                 }
-            }
+            },
         });
     }
     function checkLogin(scope) {
@@ -198,6 +238,48 @@
             }
         });
 
+    }
+    function logout(scope)
+        {$.ajax({
+            url:_host+'?r=site&fn=logout',
+            dataType:'json',
+            success:function (data) {
+                if(data){
+                    if(data.code==0){
+                        Cookies.remove('token');
+                        _token = null;
+                        console.log('登出成功!');
+                        checkLogin(scope);
+                        scope.refresh();
+                    }
+                }
+            }
+        });
+    }
+    function  addNote(content,title,scope,ionicPopup) {
+        $.ajax({
+            url:_host+'?r=test&fn=addNote',
+            data:{
+                content:content,
+                title:title,
+                token:_token,
+            },
+            dataType:'json',
+            success:function (data) {
+                if(data.code==0){
+                    console.log('添加成功');
+                    scope.$on('$ionicView.beforeEnter', function () {
+                        scope.refresh();//刷新页面
+                    });
+                    window.history.back();
+                }else{
+                    ionicPopup.alert({
+                        title: '请填写完整',
+                    });
+                   console.log('请填写完整');
+                }
+            }
+        })
     }
     angular.module('ionicApp', ['ionic'])
 
@@ -248,6 +330,7 @@
                     views: {
                         'my-tab': {
                             templateUrl: "my.html",
+                            controller:'app',
                         }
                     }
                 })
@@ -256,7 +339,7 @@
 
         })
 
-        .controller('app', function($scope) {
+        .controller('app', function($scope,$ionicPopup) {
             _Scope=$scope;
             checkLogin($scope);
             getContent($scope);
@@ -267,21 +350,60 @@
                             {'name':'新日记'},
                             {'name':'关于我'},
                            ];
-            $scope.isLogin=false;
             $scope.login = {'email':'',
                             'password':''
-            }
+            };
+            $scope.new = {'title':'',
+                'content':'',
+            };
+            $scope.homeList=[];
+            $scope.hasMore=true;
+            $scope.currentPage = 1;
             $scope.loginSubmit = function () {
                 var email = $scope.login.email;
                 var password = $scope.login.password;
-                login(email,password,$scope);
+                login(email,password,$scope,$ionicPopup);
+            };
+            $scope.addNoteSubmit = function () {
+                var content = $scope.new.content;
+                var title = $scope.new.title;
+                addNote(content,title,$scope,$ionicPopup);
             }
             $scope.timeFormat = function (nS) {
                 return new Date(parseInt(nS) * 1000).toLocaleString().replace(/:\d{1,2}$/,' ');  ;
-            }
+            };
             $scope.refresh = function () {
+                $scope.currentPage = 1;
                 location.reload();
+            };
+            $scope.logout=function () {
+                logout($scope);
+            };
+            $scope.pullFresh = function () {
+                $scope.currentPage=1;
+                $scope.homeList=[];
+                $scope.hasMore=true;
+                getContent($scope,function () {
+                    $scope.$broadcast('scroll.refreshComplete');
+                });
+            };
+            $scope.substr = function (str,length) {
+                var abstract;
+                if(str.length>length){
+                    var abstract=str.substring(0,length)+'...';
+                }else{
+                    var abstract=str;
+                }
+                return abstract;
             }
+            $scope.loadMore = function () {
+                $scope.currentPage=$scope.theLastItemId;
+                getContent($scope,function () {
+                    setTimeout(function () {
+                        $scope.$broadcast('scroll.infiniteScrollComplete');
+                    },1500);
+                })
+            };
         });
 
 </script>
