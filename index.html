@@ -45,14 +45,14 @@
 <script id="home.html" type="text/ng-template">
     <ion-view title={{tapTitle[0].name}} >
             <ion-nav-buttons side="right">
-                    <button class="button button-clear icon ion-load-a" on-tap="pullFresh()"></button>
+                    <button class="button button-clear icon ion-load-a" on-tap="refresh()"></button>
                     <a class="button button-clear icon ion-edit" href={{isLogin==true?'#/tab/new':'#/tab/login'}} >
                     </a>
             </ion-nav-buttons>
-        <ion-content has-header="true" padding="true">
+        <ion-content has-header="true" padding="true" id="_homePage">
             <ion-refresher pulling-text="下拉刷新" on-refresh="pullFresh()"></ion-refresher>
             <ion-list>
-                <ion-item ng-repeat="item in homeList">
+                <ion-item ng-repeat="(key,item) in homeList" on-tap="goDetail({{key}})">
                     <div class="card">
                         <div class="item item-divider row">
                             <span class="col-25">{{substr(item.title,20)}}</span>
@@ -72,7 +72,7 @@
                         </div>
                     </div>
                 </ion-item>
-            </ion-lst>
+            </ion-list>
             <ion-infinite-scroll ng-if="hasMore" on-infinite="loadMore()">
                 <ion-infinite-scroll-content   loadingSpinner="bubbles"></ion-infinite-scroll-content>
             </ion-infinite-scroll>
@@ -144,18 +144,42 @@
 </script>
 
 <script id="detail.html" type="text/ng-template">
-    <ion-view view-title={{tapTitle[4].name}}>
+    <ion-view >
         <ion-content class="padding">
-            <div class="list list-inset">
-                <label class="item item-input">
-                    <input type="text" placeholder="标题" ng-model="new.title">
-                </label>
-                <label class="item item-input">
-                    <textarea   class="textboxHeight" type="text" placeholder="内容" ng-model="new.content"></textarea>
-                </label>
-            </div>
-            <div class="padding" ng-click="loginSubmit()">
-                <button class="button button-block button-positive">发表</button>
+            <div class="list card">
+
+                <div class="item item-avatar">
+                    <img src="res/default.gif">
+                    <h2>{{noteDetail(currentKey).authName}}</h2>
+                    <p>{{timeFormat(noteDetail(currentKey).create_time)}}</p>
+                </div>
+
+                <div class="item item-body">
+                    <h2>{{noteDetail(currentKey).title}}</h2>
+                    <p>
+                        {{noteDetail(currentKey).content}}
+                    </p>
+                    <!--<p>-->
+                        <!--<a href="#" class="subdued">1 喜欢</a>-->
+                        <!--<a href="#" class="subdued">5 评论</a>-->
+                    <!--</p>-->
+                </div>
+
+                <!--<div class="item tabs tabs-secondary tabs-icon-left">-->
+                    <!--<a class="tab-item" href="#">-->
+                        <!--<i class="icon ion-thumbsup"></i>-->
+                        <!--喜欢-->
+                    <!--</a>-->
+                    <!--<a class="tab-item" href="#">-->
+                        <!--<i class="icon ion-chatbox"></i>-->
+                        <!--评论-->
+                    <!--</a>-->
+                    <!--<a class="tab-item" href="#">-->
+                        <!--<i class="icon ion-share"></i>-->
+                        <!--分享-->
+                    <!--</a>-->
+                <!--</div>-->
+
             </div>
         </ion-content>
     </ion-view>
@@ -164,63 +188,69 @@
 
 
 <script type="text/javascript">
-    var _host = 'http://127.0.0.1/basic/web/';
+    var _host = 'http://192.168.7.147/basic/web/';
     var _token = '';
     if(Cookies.get('token')){
         _token = Cookies.get('token');
     }
     var _Page = '';
     var _Scope = '';
+    var _homeList='';
     function getContent(scope,callback) {
-        $.ajax({
-            url:_host+'?r=test&fn=loadMore',
-            data:{
-                currentItem:scope.currentPage,
-                number:10,
-                token:_token,
-            },
-            dataType:'json',
-            async:true,
-            success:function (data) {
-                if(data.info){
-                    scope.data = data.info;
-                    scope.homeList=scope.homeList.concat(scope.data);
-                    scope.theLastItemId=data.info[data.info.length-1].id;
-                }else{
-                    scope.hasMore=false;
-                }
-                if(callback){
-                    callback();
-                }
-            },
-        })
+            $.ajax({
+                url: _host + '?r=test&fn=loadMore',
+                data: {
+                    currentItem: scope.currentPage,
+                    number: 10,
+                    token: _token,
+                },
+                dataType: 'json',
+                async: true,
+                success: function (data) {
+                    if (data.info) {
+                        console.log('d');
+                        scope.data = data.info;
+                        scope.homeList = scope.homeList.concat(scope.data);
+                        _homeList = scope.homeList;
+                        scope.theLastItemId = data.info[data.info.length - 1].id;
+                    } else {
+                        scope.hasMore = false;
+                    }
+                    if (callback) {
+                        callback();
+                    }
+                },
+            })
+
     }
     function login(email,password,scope,ionicPopup) {
-        $.ajax({
-            type: 'get',
-            url: _host+'?r=site&fn=login',
-            data: {email:email,password:password,token:_token} ,
-            dataType: 'json',
-            success: function(data) {
-                if(data.code==0){
-                    Cookies.set('token',data.token);
-                    _token=data.token;
-                    var username = data.data;
-                    console.log('欢迎您,'+username);
-                    checkLogin(scope);
-                    scope.$on('$ionicView.beforeEnter', function () {
-                                          scope.refresh();//刷新页面
-                    });
-                    window.history.back();
-                }else{
-                    ionicPopup.alert({
-                        title: '邮箱或密码错误',
-                    });
-                    console.log('邮箱或密码错误');
-                    checkLogin(scope);
-                }
-            },
-        });
+
+            $.ajax({
+                type: 'get',
+                url: _host+'?r=site&fn=login',
+                data: {email:email,password:password,token:_token} ,
+                dataType: 'json',
+                success: function(data) {
+                    if(data.code==0){
+                        Cookies.set('token',data.token);
+                        _token=data.token;
+                        var username = data.data;
+                        console.log('欢迎您,'+username);
+                        checkLogin(scope);
+                        scope.$on('$ionicView.beforeEnter', function () {
+                            _Scope.refresh();//刷新页面
+                        });
+                        window.history.back();
+                    }else{
+                        ionicPopup.alert({
+                            title: '邮箱或密码错误',
+                        });
+                        console.log('邮箱或密码错误');
+                        checkLogin(scope);
+                    }
+
+                },
+            });
     }
     function checkLogin(scope) {
         $.ajax({
@@ -281,6 +311,7 @@
             }
         })
     }
+
     angular.module('ionicApp', ['ionic'])
 
         .config(function($stateProvider, $urlRouterProvider) {
@@ -330,19 +361,33 @@
                     views: {
                         'my-tab': {
                             templateUrl: "my.html",
-                            controller:'app',
                         }
                     }
                 })
-
+                .state('tabs.detail', {
+                    url: "/detail/:key",
+                    views: {
+                        'home-tab': {
+                            templateUrl: "detail.html",
+                            controller:'app',
+                            params:{
+                                'key':null,
+                            }
+                        }
+                    }
+                })
             $urlRouterProvider.otherwise("/tab/home");
 
         })
 
-        .controller('app', function($scope,$ionicPopup) {
+        .controller('app', function($scope,$ionicPopup,$state,$stateParams,$timeout,$ionicLoading) {
             _Scope=$scope;
             checkLogin($scope);
-            getContent($scope);
+
+            $scope.currentPage = 1;
+            $scope.homeList=[];
+            $scope.hasMore=true;
+
             $scope.tapTitle=[{'name':'主页'},
                             {'name':'我的'},
                             {'name':'登录'},
@@ -356,9 +401,7 @@
             $scope.new = {'title':'',
                 'content':'',
             };
-            $scope.homeList=[];
-            $scope.hasMore=true;
-            $scope.currentPage = 1;
+
             $scope.loginSubmit = function () {
                 var email = $scope.login.email;
                 var password = $scope.login.password;
@@ -373,7 +416,9 @@
                 return new Date(parseInt(nS) * 1000).toLocaleString().replace(/:\d{1,2}$/,' ');  ;
             };
             $scope.refresh = function () {
-                $scope.currentPage = 1;
+                $scope.currentPage=1;
+                $scope.homeList=[];
+                $scope.hasMore=true;
                 location.reload();
             };
             $scope.logout=function () {
@@ -404,8 +449,29 @@
                     },1500);
                 })
             };
+            $scope.noteDetail = function (key) {
+                return _homeList[key];
+            }
+            $scope.currentKey=$stateParams.key;
+            $scope.goDetail = function (key) {
+                $state.go('tabs.detail',{
+                    key:key,
+                });
+                $ionicLoading.show({
+                    content: 'Loading',
+                    animation: 'fade-in',
+                    showBackdrop: true,
+                    maxWidth: 200,
+                    showDelay: 0
+                });
+                $timeout(function () {
+                    $ionicLoading.hide();
+                }, 500);
+            }
         });
-
+    $(document).ready(function () {
+        getContent(_Scope);
+    });
 </script>
 
 </body>
